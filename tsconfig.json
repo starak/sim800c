@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "lib": [
+            "es2018"
+        ],
+        "module": "commonjs",
+        "declaration": true,
+        "target": "es2018",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "sourceMap": true,
+        "outDir": "dist"
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
