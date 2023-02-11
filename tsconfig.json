@@ -10,7 +10,7 @@
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
-        "sourceMap": true,
+        "inlineSourceMap": true,
         "outDir": "dist"
     },
     "include": [

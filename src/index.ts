@@ -1,16 +1,26 @@
-// noinspection JSUnusedGlobalSymbols
-
 import EventEmitter from "events";
-import {SerialPort, SerialPortMock} from "serialport";
-import {PDUParser} from "pdu.ts";
-import {EpduMessage, GsmMessage} from "./types";
+import {SerialPort} from "serialport";
+import {PDUParser, pduMessage} from "pdu.ts";
 
+export interface EpduMessage extends pduMessage{
+    udh: Record<string, any>
+    multipart: boolean,
+    parts?: number,
+    parts_raw?: GsmMessage[],
+}
+
+export interface GsmMessage{
+    index: number;
+    message: EpduMessage;
+    raw: string;
+    state: string;
+}
 export * from "serialport";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export class GSM extends EventEmitter {
-    port: SerialPort | SerialPortMock;
+    port: SerialPort;
     _ready: Promise<void>;
     constructor(path: string) {
         super();
