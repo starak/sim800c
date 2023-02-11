@@ -24,7 +24,7 @@ const {GSM, SerialPort} = require('@starak/sim800c');
         const gsm = new GSM(SIM_PATH);
         await gsm.ready();
         await gsm.sendMessage('55512345', 'Hello from SIM800C');
-        console,log('Message sent');
+        console.log('Message sent');
         gsm.on('newMessage', async (message) => {
             console.log('newMessage', message);
             await gsm.deleteMessage(message.index);
