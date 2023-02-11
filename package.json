@@ -1,6 +1,6 @@
 {
     "name": "@starak/sim800c",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Simple library for sending and receiving messages with sim800c",
     "main": "dist/index.js",
     "files": [
