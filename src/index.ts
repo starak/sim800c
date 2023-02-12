@@ -1,33 +1,7 @@
 import EventEmitter from "events";
 import {SerialPort} from "serialport";
 import {PDUParser, pduMessage} from "pdu.ts";
-import console_stamp from 'console-stamp';
-
-
-const logger_out = new console.Console(process.stdout, process.stderr);
-const logger_in = new console.Console(process.stdout, process.stderr);
-
-console_stamp(logger_out, {
-    format: '([<-]).white :debug.red',
-    level: process.env.DEBUG_SIM ? 'debug' : 'error',
-    tokens: {
-        debug: ({msg}) => msg.replace(/\r\n/g, '\n')
-            .replace(/\r/g, '')
-    },
-    preventDefaultMessage: true
-});
-
-console_stamp(logger_in, {
-    format: '([->]).white :debug.green',
-    level: process.env.DEBUG_SIM ? 'debug' : 'error',
-    tokens: {
-        debug: ({msg}) => msg.replace(/\r\n/g, '\n')
-            .replace(/\r/g, '')
-    },
-    preventDefaultMessage: true
-});
-
-logger_in.debug('Debugging is enabled');
+import {logger_in, logger_out} from "./debug";
 
 export interface UDH {
     parts: number,
@@ -87,7 +61,11 @@ export class GSM extends EventEmitter {
             if (message) {
                 if (!message.message.multipart || message.message.parts === message.message.parts_raw?.length) {
                     this.emit('newMessage', message);
+                } else {
+                    this.emit('multipartMessage', message.message.udh);
                 }
+            } else {
+                console.log('Error getting incoming message.', data.toString());
             }
         }
     }
