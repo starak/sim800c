@@ -1,6 +1,8 @@
 # SIM800C 
 Simple library for sending and receiving messages with sim800c
 
+## WIP! Do not use!
+
 ### Installation
 ```bash
 $ npm install @starak/sim800c
