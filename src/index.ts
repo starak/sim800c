@@ -3,18 +3,31 @@ import {SerialPort} from "serialport";
 import {PDUParser, pduMessage} from "pdu.ts";
 import console_stamp from 'console-stamp';
 
-let logger = new console.Console(process.stdout, process.stderr);
 
-console_stamp(logger, {
-    format: '> :debug',
+const logger_out = new console.Console(process.stdout, process.stderr);
+const logger_in = new console.Console(process.stdout, process.stderr);
+
+console_stamp(logger_out, {
+    format: '([<-]).white :debug.red',
     level: process.env.DEBUG_SIM ? 'debug' : 'error',
     tokens: {
         debug: ({msg}) => msg.replace(/\r\n/g, '\n')
+            .replace(/\r/g, '')
     },
     preventDefaultMessage: true
 });
 
-logger.debug('Debugging is enabled');
+console_stamp(logger_in, {
+    format: '([->]).white :debug.green',
+    level: process.env.DEBUG_SIM ? 'debug' : 'error',
+    tokens: {
+        debug: ({msg}) => msg.replace(/\r\n/g, '\n')
+            .replace(/\r/g, '')
+    },
+    preventDefaultMessage: true
+});
+
+logger_in.debug('Debugging is enabled');
 
 export interface EpduMessage extends pduMessage {
     udh: Record<string, any>
@@ -48,7 +61,7 @@ export class GSM extends EventEmitter {
             this.emit('ready');
         });
         this.port.on('data', (data) => {
-            logger.debug(data.toString());
+            logger_in.debug(data.toString());
             this.emit('data', data);
             setImmediate(() => this.onDataHandler(data));
         })
@@ -94,6 +107,7 @@ export class GSM extends EventEmitter {
             }
             let data = '';
             port.on('data', listener);
+            logger_out.debug(command + terminator);
             port.write(`${command}${terminator}`);
         });
     }
@@ -118,6 +132,10 @@ export class GSM extends EventEmitter {
         return this.sendCommand(`${message}`, '\x1a');
     }
 
+    public async rejectCalls(): Promise<void> {
+        return this.sendCommand('AT+GSMBUSY=1');
+    }
+
     public async sendMessage(number: string, message: string) {
         await this.reset();
         await this.setTextMode();
@@ -125,14 +143,12 @@ export class GSM extends EventEmitter {
         await this.setMessage(message);
     }
 
-    public async deleteMessage(index: number): Promise<void> {
-        const messages = await this.getMessages();
-        const current = messages.find(m => m.index === index);
+    public async deleteMessage(msg: GsmMessage): Promise<void> {
         let indexes: number[] = [];
-        if (current && current.message.multipart) {
-            indexes = current.message.parts_raw?.map(m => m.index) || [];
-        } else if (current) {
-            indexes = [index];
+        if (msg && msg.message.multipart) {
+            indexes = msg.message.parts_raw?.map(m => m.index) || [];
+        } else if (msg) {
+            indexes = [msg.index];
         }
         for (const i of indexes) {
             await this.sendCommand(`AT+CMGD=${i}`);
@@ -149,19 +165,14 @@ export class GSM extends EventEmitter {
         const {port} = this;
 
         return new Promise((resolve, reject): GsmMessage[] | void => {
-            let init = false;
             const listener = async (d: Buffer) => {
                 data += d.toString();
                 const lines = data.split('\r\n');
                 data = lines.pop() || '';
                 for (const line of lines) {
                     if (line.includes('OK')) {
-                        if (!init) {
-                            init = true;
-                        } else {
-                            port.removeListener('data', listener);
-                            resolve(msgs.map(m => ({...m, message: PDUParser.Parse(m.raw)})) as GsmMessage[]);
-                        }
+                        port.removeListener('data', listener);
+                        resolve(msgs.map(m => ({...m, message: PDUParser.Parse(m.raw)})) as GsmMessage[]);
                     } else if (line.includes('ERROR')) {
                         port.removeListener('data', listener);
                         reject();
@@ -171,7 +182,6 @@ export class GSM extends EventEmitter {
                             .map(s => s.replace(/"/g, ''));
                         current = {index: +index, state, raw, message: {} as EpduMessage};
                         msgs.push(current);
-                        init = true;
                     } else {
                         current.raw += line;
                     }
@@ -179,6 +189,7 @@ export class GSM extends EventEmitter {
             }
             let data = '', msgs: GsmMessage[] = [], current = {} as GsmMessage;
             port.on('data', listener);
+            logger_out.debug('AT+CMGL=4\r');
             port.write('AT+CMGL=4\r');
         });
     }
@@ -209,6 +220,7 @@ export class GSM extends EventEmitter {
     }
 
     public async getMessage(index: number): Promise<GsmMessage> {
+        // TODO: implement AT+CMGR - Read Message
         const messages = await this.getMessages();
         return messages.find(m => m.index === index) as GsmMessage;
     }
