@@ -29,10 +29,18 @@ console_stamp(logger_in, {
 
 logger_in.debug('Debugging is enabled');
 
+export interface UDH {
+    parts: number,
+    current_part: number,
+    reference_number: string,
+    length: string,
+    iei: string,
+}
+
 export interface EpduMessage extends pduMessage {
-    udh: Record<string, any>
+    udh?: UDH,
     multipart: boolean,
-    parts?: number,
+    parts: number,
     parts_raw?: GsmMessage[],
     sender?: string,
     senderType?: number,
@@ -46,8 +54,6 @@ export interface GsmMessage {
 }
 
 export * from "serialport";
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export class GSM extends EventEmitter {
     port: SerialPort;
@@ -79,11 +85,7 @@ export class GSM extends EventEmitter {
             const index = data.toString().split(',')[1];
             const message = await this.getMessage(+index);
             if (message) {
-                if (message.message.multipart && (message.message.parts || 0) > (message.message.parts_raw?.length || 0)) {
-                    // We need to wait for the rest of the message
-                    await sleep(500);
-                    setImmediate(() => this.onDataHandler(data));
-                } else {
+                if (!message.message.multipart || message.message.udh?.parts === message.message.udh?.current_part) {
                     this.emit('newMessage', message);
                 }
             }
@@ -163,8 +165,10 @@ export class GSM extends EventEmitter {
         await this.reset();
         await this.setPDUMode();
         const {port} = this;
+        let data = '', msgs: GsmMessage[] = [], current = {} as GsmMessage;
 
         return new Promise((resolve, reject): GsmMessage[] | void => {
+            const command = 'AT+CMGL=4\r';
             const listener = async (d: Buffer) => {
                 data += d.toString();
                 const lines = data.split('\r\n');
@@ -187,10 +191,10 @@ export class GSM extends EventEmitter {
                     }
                 }
             }
-            let data = '', msgs: GsmMessage[] = [], current = {} as GsmMessage;
+
             port.on('data', listener);
-            logger_out.debug('AT+CMGL=4\r');
-            port.write('AT+CMGL=4\r');
+            logger_out.debug(command);
+            port.write(command);
         });
     }
 
@@ -201,7 +205,7 @@ export class GSM extends EventEmitter {
                 if (m.message.udh.current_part === 1) {
                     const parts = messages
                         .filter(m2 => m2.message.udh)
-                        .filter(m2 => m2.message.udh.reference_number === m.message.udh.reference_number);
+                        .filter(m2 => m2.message.udh?.reference_number === m.message.udh?.reference_number);
                     return {
                         ...m,
                         message: {
@@ -215,13 +219,16 @@ export class GSM extends EventEmitter {
                 }
                 return undefined;
             }
-            return {...m, multipart: false};
+            return {...m, multipart: false, parts: 1};
         }).filter(m => m !== undefined) as GsmMessage[];
     }
 
     public async getMessage(index: number): Promise<GsmMessage> {
-        // TODO: implement AT+CMGR - Read Message
         const messages = await this.getMessages();
-        return messages.find(m => m.index === index) as GsmMessage;
+        let message = messages.find(m => m.index === index);
+        if(!message) {
+            message = messages.find(m => m.message.parts_raw?.find(m2 => m2.index === index));
+        }
+        return message as GsmMessage || undefined;
     }
 }
