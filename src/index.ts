@@ -85,7 +85,7 @@ export class GSM extends EventEmitter {
             const index = data.toString().split(',')[1];
             const message = await this.getMessage(+index);
             if (message) {
-                if (!message.message.multipart || message.message.udh?.parts === message.message.udh?.current_part) {
+                if (!message.message.multipart || message.message.parts === message.message.parts_raw?.length) {
                     this.emit('newMessage', message);
                 }
             }
