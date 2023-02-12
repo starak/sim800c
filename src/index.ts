@@ -1,20 +1,37 @@
 import EventEmitter from "events";
 import {SerialPort} from "serialport";
 import {PDUParser, pduMessage} from "pdu.ts";
+import console_stamp from 'console-stamp';
 
-export interface EpduMessage extends pduMessage{
+let logger = new console.Console(process.stdout, process.stderr);
+
+console_stamp(logger, {
+    format: '> :debug',
+    level: process.env.DEBUG_SIM ? 'debug' : 'error',
+    tokens: {
+        debug: ({msg}) => msg.replace(/\r\n/g, '\n')
+    },
+    preventDefaultMessage: true
+});
+
+logger.debug('Debugging is enabled');
+
+export interface EpduMessage extends pduMessage {
     udh: Record<string, any>
     multipart: boolean,
     parts?: number,
     parts_raw?: GsmMessage[],
+    sender?: string,
+    senderType?: number,
 }
 
-export interface GsmMessage{
+export interface GsmMessage {
     index: number;
     message: EpduMessage;
     raw: string;
     state: string;
 }
+
 export * from "serialport";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -22,6 +39,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export class GSM extends EventEmitter {
     port: SerialPort;
     _ready: Promise<void>;
+
     constructor(path: string) {
         super();
         this.port = new SerialPort({path: path, baudRate: 115200});
@@ -29,9 +47,10 @@ export class GSM extends EventEmitter {
             await this.reset();
             this.emit('ready');
         });
-        this.port.on('data', (data)=>{
+        this.port.on('data', (data) => {
+            logger.debug(data.toString());
             this.emit('data', data);
-            setImmediate(()=>this.onDataHandler(data));
+            setImmediate(() => this.onDataHandler(data));
         })
         this._ready = new Promise((resolve) => {
             this.on('ready', resolve);
@@ -43,15 +62,15 @@ export class GSM extends EventEmitter {
     }
 
     private onDataHandler = async (data: Buffer) => {
-        if(data.includes('+CMTI:')){ // New Message
+        if (data.includes('+CMTI:')) { // Incoming Message
             const index = data.toString().split(',')[1];
             const message = await this.getMessage(+index);
-            if(message){
-                if(message.message.multipart && (message.message.parts || 0) > (message.message.parts_raw?.length || 0) ) {
+            if (message) {
+                if (message.message.multipart && (message.message.parts || 0) > (message.message.parts_raw?.length || 0)) {
                     // We need to wait for the rest of the message
                     await sleep(500);
-                    setImmediate(()=>this.onDataHandler(data));
-                }else{
+                    setImmediate(() => this.onDataHandler(data));
+                } else {
                     this.emit('newMessage', message);
                 }
             }
@@ -69,7 +88,7 @@ export class GSM extends EventEmitter {
                 } else if (data.includes('ERROR')) {
                     port.removeListener('data', listener);
                     reject('error');
-                } else{
+                } else {
                     //console.log('none', command, data);
                 }
             }
@@ -110,9 +129,9 @@ export class GSM extends EventEmitter {
         const messages = await this.getMessages();
         const current = messages.find(m => m.index === index);
         let indexes: number[] = [];
-        if(current && current.message.multipart){
+        if (current && current.message.multipart) {
             indexes = current.message.parts_raw?.map(m => m.index) || [];
-        }else if(current) {
+        } else if (current) {
             indexes = [index];
         }
         for (const i of indexes) {
@@ -124,29 +143,35 @@ export class GSM extends EventEmitter {
         return this.sendCommand('AT+CMGD=1,4');
     }
 
-    private async Messages(): Promise<GsmMessage[]>  {
+    private async Messages(): Promise<GsmMessage[]> {
         await this.reset();
         await this.setPDUMode();
         const {port} = this;
 
         return new Promise((resolve, reject): GsmMessage[] | void => {
+            let init = false;
             const listener = async (d: Buffer) => {
                 data += d.toString();
                 const lines = data.split('\r\n');
                 data = lines.pop() || '';
                 for (const line of lines) {
                     if (line.includes('OK')) {
-                        port.removeListener('data', listener);
-                        resolve(msgs.map(m => ({...m, message: PDUParser.Parse(m.raw)})) as GsmMessage[]);
+                        if (!init) {
+                            init = true;
+                        } else {
+                            port.removeListener('data', listener);
+                            resolve(msgs.map(m => ({...m, message: PDUParser.Parse(m.raw)})) as GsmMessage[]);
+                        }
                     } else if (line.includes('ERROR')) {
                         port.removeListener('data', listener);
                         reject();
-                    } else if(line.startsWith('+CMGL: ')){
-                        const [index, state, raw] = line.replace(/^\+CMGL:\s/,'')
+                    } else if (line.startsWith('+CMGL: ')) {
+                        const [index, state, raw] = line.replace(/^\+CMGL:\s/, '')
                             .split(',')
                             .map(s => s.replace(/"/g, ''));
                         current = {index: +index, state, raw, message: {} as EpduMessage};
                         msgs.push(current);
+                        init = true;
                     } else {
                         current.raw += line;
                     }
@@ -158,13 +183,13 @@ export class GSM extends EventEmitter {
         });
     }
 
-    public async getMessages(): Promise<GsmMessage[]>  {
+    public async getMessages(): Promise<GsmMessage[]> {
         const messages = await this.Messages();
         return messages.map(m => {
-            if(m.message.udh){
-                if(m.message.udh.current_part === 1){
+            if (m.message.udh) {
+                if (m.message.udh.current_part === 1) {
                     const parts = messages
-                        .filter(m2=>m2.message.udh)
+                        .filter(m2 => m2.message.udh)
                         .filter(m2 => m2.message.udh.reference_number === m.message.udh.reference_number);
                     return {
                         ...m,
