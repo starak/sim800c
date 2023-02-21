@@ -195,7 +195,7 @@ export class GSM extends EventEmitter {
 
     public async getMessages(): Promise<Message[]> {
         let messages = (await this.getAllPDUMessages().then(msgs => msgs.map(m => this.parsePDUMessage(m))));
-        console.log('msg count', messages.length);
+        //console.log('msg count', messages.length);
         messages = messages.map(m => {
                 if (m.message.udh) {
                     if (m.message.udh.current_part === 1) {
