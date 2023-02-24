@@ -2,6 +2,8 @@ import EventEmitter from "events";
 import {SerialPort} from "serialport";
 import {PDUParser, pduMessage} from "pdu.ts";
 import {logger_in, logger_out} from "./debug";
+// @ts-ignore
+import pdu from "node-pdu";
 
 interface UDH {
     parts: number,
@@ -125,6 +127,10 @@ export class GSM extends EventEmitter {
         return this.sendCommand(`AT+CMGS="${number}"`);
     }
 
+    private async setLength(length: number): Promise<void> {
+        return this.sendCommand(`AT+CMGS=${length}`);
+    }
+
     private async setMessage(message: string): Promise<void> {
         return this.sendCommand(`${message}`, '\x1a');
     }
@@ -133,11 +139,25 @@ export class GSM extends EventEmitter {
         return this.sendCommand('AT+GSMBUSY=1');
     }
 
-    public async sendMessage(number: string, message: string) {
+    public async sendMessageTxt(number: string, message: string) {
         await this.reset();
         await this.setTextMode();
         await this.setRecipient(number);
         await this.setMessage(message);
+    }
+
+    public async sendMessage(number: string, message: string) {
+        let submit = pdu.Submit();
+        submit.setAddress(number.replace('+', ''));
+        submit.setData(message);
+        submit.getDcs().setUseMessageClass(true);
+        const parts = submit.getParts();
+        await this.reset();
+        await this.setPDUMode();
+        for(let i = 0; i < parts.length; i++) {
+            await this.setLength((parts[i].toString().length/2) - 1);
+            await this.setMessage(parts[i].toString());
+        }
     }
 
     public async deleteMessage(msg: Message): Promise<void> {
@@ -195,7 +215,6 @@ export class GSM extends EventEmitter {
 
     public async getMessages(): Promise<Message[]> {
         let messages = (await this.getAllPDUMessages().then(msgs => msgs.map(m => this.parsePDUMessage(m))));
-        //console.log('msg count', messages.length);
         messages = messages.map(m => {
                 if (m.message.udh) {
                     if (m.message.udh.current_part === 1) {
