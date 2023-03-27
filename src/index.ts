@@ -150,7 +150,7 @@ export class GSM extends EventEmitter {
         let submit = pdu.Submit();
         submit.setAddress(number.replace('+', ''));
         submit.setData(message);
-        submit.getDcs().setUseMessageClass(true);
+        submit.getDcs().setUseMessageClass(false);
         const parts = submit.getParts();
         await this.reset();
         await this.setPDUMode();
