@@ -23,7 +23,7 @@
         "console-stamp": "^3.1.1",
         "eventemitter3": "^5.0.0",
         "node-pdu": "^1.0.15",
-        "p-queue": "^7.3.4",
+        "p-queue": "^6.6.2",
         "pdu.ts": "^1.1.4",
         "serialport": "^10.5.0"
     },
