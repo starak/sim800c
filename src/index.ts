@@ -115,7 +115,7 @@ export class GSM extends EventEmitter {
     }
 
     public async reset(): Promise<void> {
-        return this.sendCommand('ATZ');
+        return this.sendCommand('ATZ').then(() => this.rejectCalls());
     }
 
     private async setTextMode(): Promise<void> {
