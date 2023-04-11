@@ -1,4 +1,5 @@
-import EventEmitter from "events";
+import EventEmitter from "eventemitter3";
+import PQueue from 'p-queue';
 import {SerialPort} from "serialport";
 import {PDUParser, pduMessage} from "pdu.ts";
 import {logger_in, logger_out} from "./debug";
@@ -53,6 +54,7 @@ export * from "serialport";
 export class GSM extends EventEmitter {
     port: SerialPort;
     _ready: Promise<void>;
+    _sendQueue: PQueue = new PQueue({concurrency: 1});
 
     constructor(path: string) {
         super();
@@ -85,6 +87,7 @@ export class GSM extends EventEmitter {
                 }
             } else {
                 console.log('Error getting incoming message.', data.toString());
+                throw new Error('Error getting incoming message.' + data.toString());
             }
         }
     }
@@ -158,6 +161,10 @@ export class GSM extends EventEmitter {
             await this.setLength((parts[i].toString().length/2) - 1);
             await this.setMessage(parts[i].toString());
         }
+    }
+
+    public async sendQueue(number: string, message: string) {
+        return this._sendQueue.add(() => this.sendMessage(number, message));
     }
 
     public async deleteMessage(msg: Message): Promise<void> {
