@@ -227,7 +227,8 @@ export class GSM extends EventEmitter {
                     if (m.message.udh.current_part === 1) {
                         const parts = messages
                             .filter(m2 => m2.message.udh)
-                            .filter(m2 => m2.message.udh?.reference_number === m.message.udh?.reference_number);
+                            .filter(m2 => m2.message.udh?.reference_number === m.message.udh?.reference_number)
+                            .sort((a, b) => (a.message.udh?.current_part || 0) - (b.message.udh?.current_part || 0));
                         return {
                             ...m,
                             message: {
