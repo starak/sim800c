@@ -80,6 +80,8 @@ export class GSM extends EventEmitter {
     private onDataHandler = async (data: Buffer) => {
         if (data.includes('+CMTI:')) { // Incoming Message
             const index = data.toString().split(',')[1];
+            // We should wait a bit for the message to be written to the SIM card. No hurry :)
+            await new Promise((resolve) => setTimeout(resolve, 2000));
             const message = await this.getMessage(+index);
             if (message) {
                 if (message.parts === message.indexes.length) {
