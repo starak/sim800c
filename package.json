@@ -1,13 +1,14 @@
 {
     "name": "@starak/sim800c",
-    "version": "0.0.20",
+    "version": "2.0.0",
     "description": "Simple library for sending and receiving messages with sim800c",
     "main": "dist/index.js",
     "files": [
         "dist/**/*"
     ],
     "scripts": {
-        "build": "tsc"
+        "build": "tsc",
+        "dev": "nodemon local.ts"
     },
     "author": {
         "name": "Ståle Raknes",
@@ -22,13 +23,15 @@
     "dependencies": {
         "console-stamp": "^3.1.1",
         "eventemitter3": "^5.0.0",
-        "node-pdu": "^1.0.15",
+        "node-pdu": "^2.0.2",
         "p-queue": "^6.6.2",
-        "pdu.ts": "^1.1.4",
         "serialport": "^10.5.0"
     },
     "devDependencies": {
+        "@starak/sim800c": "^0.0.20",
         "@types/node": "^17.0.21",
+        "dotenv": "^16.3.1",
+        "nodemon": "^3.0.1",
         "ts-node": "^10.9.1",
         "typescript": "^4.9.5"
     },
