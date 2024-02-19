@@ -19,7 +19,7 @@ const {SIM800C} = require('@starak/sim800c');
     await gsm.open();
     await gsm.sendMessage('55512345', 'Hello from SIM800C');
     console.log('Message sent');
-    gsm.on('newMessage', async (message) => {
+    gsm.on('message', async (message) => {
         console.log('newMessage', message);
         await gsm.deleteMessage(message.index);
     });
