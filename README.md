@@ -26,3 +26,10 @@ const {SIM800C} = require('@starak/sim800c');
 
 })();
 ```
+
+### Setup environment
+You'll need to create a `.env` file in the root directory of the project. It should look like this:
+```bash
+DEBUG_SIM=true            # to enable debug messages
+SERIAL_PORT=/dev/serial0  # or whatever your SIM800C is connected to
+```

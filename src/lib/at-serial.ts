@@ -27,8 +27,10 @@ export class AtSerial extends EventEmitter{
     }
 
     public open (): Promise<void> {
+        // TODO: return single promise for open
         return new Promise((resolve, reject) => {
             this.port = new SerialPort(this.options);
+
             this.parser = new Readline({ delimiter: '\r\n' });
             this.parser.on('data', (data) => {
                 this.serialStream.incomming(data+'\n');
@@ -66,15 +68,18 @@ export class AtSerial extends EventEmitter{
             let response: string[] = [];
             const listener = (chunkB: Buffer) => {
                 const chunk = chunkB.toString();
+
                 response.push(chunk);
-                if (chunk.includes('ERROR')) {
+                const lines = response.join('').split('\r\n').filter(Boolean);
+                const lastLine = (lines[lines.length - 1] || '').trim();
+                if (lastLine === 'ERROR') {
                     clearTimeout(commandTimeout);
                     port.removeListener('data', listener);
                     reject(new Error('Command error'));
                     return;
                 }
 
-                if (chunk.includes('OK')) {
+                if (lastLine === 'OK') {
                     clearTimeout(commandTimeout);
                     port.removeListener('data', listener);
                     end = new Date();
@@ -83,14 +88,15 @@ export class AtSerial extends EventEmitter{
                         start,
                         end,
                         executionTime: end.getTime() - start.getTime(),
-                        response: response.join('\n'),
+                        response: response.join(''),
                     });
                 }
 
-                if (chunk.includes('>') && commands.length > 1) {
+                if (lastLine.includes('>') && commands.length > 1) {
                     const c = `${commands[1]}${terminators[1]}`;
-                    this.serialStream.outgoing(c);
+                    this.serialStream.outgoing(c+'\n');
                     port.write(c);
+                    commands.pop();
                 }
 
             };

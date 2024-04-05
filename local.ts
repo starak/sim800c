@@ -13,10 +13,12 @@ const logStream = require('fs').createWriteStream(logFileName, {flags: 'a'});
 
     const msgs = await port.getMessages();
     console.log('messages:', msgs);
+    // await port.sendMessage('55555555', 'Hello World');
     // await port.deleteAllMessages();
     port.on('message', (msg) => {
         console.log('New Message: ', msg);
     });
+
     // close serial connection
     // await port.close();
 })();

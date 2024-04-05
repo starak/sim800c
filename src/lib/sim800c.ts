@@ -53,7 +53,7 @@ export class SIM800C extends AtSerial {
                 const userDataLength = (pdu.length - smscInfoLength) / 2;
                 const command = `AT+CMGS=${userDataLength} > ${pdu}`;
                 const terminator = `\r > ${CTRL_Z}`;
-                const c = await this.sendCommand(command, terminator);
+                const c = await this.sendCommand(command, terminator, 60000);
                 logger.debug(JSON.stringify(c));
             }
         }).catch(e => {
