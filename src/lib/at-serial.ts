@@ -27,7 +27,6 @@ export class AtSerial extends EventEmitter{
     }
 
     public open (): Promise<void> {
-        // TODO: return single promise for open
         return new Promise((resolve, reject) => {
             this.port = new SerialPort(this.options);
 
