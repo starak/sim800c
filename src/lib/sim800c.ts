@@ -40,7 +40,7 @@ export class SIM800C extends AtSerial {
 
     public async sendMessage(number: string, message: string) {
         return this.queue.add(async () => {
-            message += "\u200B"; // Add zero-width space to the end of the message to force unicode as a workaround for the 7-bit bug in node-pdu.
+            message = "\u200B" + message; // Add zero-width space at the start of the message to force unicode as a workaround for the 7-bit bug in node-pdu.
             let submit = new Submit(number, message);
             submit.dataCodingScheme.setUseMessageClass(false);
             const parts = submit.getPartStrings();
