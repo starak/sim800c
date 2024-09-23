@@ -71,7 +71,7 @@ export function processMessage(message: TempMessageParsed, allMessages: TempMess
 
     if (message.message.header.getCurrent() === 1) {
         const relatedMessages = getRelatedMessages(message, allMessages);
-        if (relatedMessages.length !== message.message.header.getSegments()) {
+        if (relatedMessages.length < (message.message.header.getSegments() || 0)) {
             // Not all parts are present
             return undefined;
         }
@@ -82,7 +82,29 @@ export function processMessage(message: TempMessageParsed, allMessages: TempMess
 }
 
 export function processMessages(messages: TempMessageParsed[]): TempMessageParsed[] {
+    const duplicates = findDuplicates(messages);
+    if (duplicates.length) {
+        console.log('Duplicates found', duplicates.map(d => d.index));
+        messages = messages.filter(message => !duplicates.find(duplicate => duplicate.index === message.index));
+    }
     return messages
         .map(message => processMessage(message, messages))
         .filter(message => message !== undefined) as TempMessageParsed[];
+}
+
+function findDuplicates(messages: TempMessageParsed[]): TempMessageParsed[] {
+    const seenMessages: { [key: string]: TempMessageParsed } = {};
+    const duplicates: TempMessageParsed[] = [];
+
+    for (const message of messages) {
+        const serializedMessage = JSON.stringify(message.message);
+
+        if (seenMessages[serializedMessage]) {
+            duplicates.push(message);
+        } else {
+            seenMessages[serializedMessage] = message;
+        }
+    }
+
+    return duplicates;
 }

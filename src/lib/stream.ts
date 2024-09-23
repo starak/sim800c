@@ -5,9 +5,15 @@ export class Stream extends Readable{
         // No implementation needed for pushing data manually
     }
     incomming(message = ''): void {
-        this.push(`>> ${message.toString().replace(/ /g,'\u2e31')}`);
+        if(message.toString().startsWith('> 0041000')){
+            message = '[CENSORED OUTGOING MESSAGE]\n';
+        }
+        this.push(`>> ${message.toString()}`);
     }
     outgoing(message = ''): void {
-        this.push(`<< ${message.replace(/ /g,'\u2e31')}`);
+        if(message.startsWith('0041000')){
+            message = '[CENSORED OUTGOING MESSAGE]\n';
+        }
+        this.push(`<< ${message}`);
     }
 }
