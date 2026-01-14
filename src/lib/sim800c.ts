@@ -25,12 +25,6 @@ export class SIM800C extends AtSerial {
     public async reset(): Promise<void> {
         const c = await this.sendCommand('ATZ');
         logger.debug(JSON.stringify(c));
-        await this.rejectCalls();
-    }
-
-    public async rejectCalls(): Promise<void> {
-        const c = await this.sendCommand('AT+GSMBUSY=1');
-        logger.debug(JSON.stringify(c));
     }
 
     private async setPDUMode(): Promise<void> {
