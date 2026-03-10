@@ -76,6 +76,11 @@ export class AtSerial extends EventEmitter{
                     port.removeListener('data', listener);
                     reject(new Error('Command error'));
                     return;
+                } else if (lastLine.includes("+CMS ERROR: 500")){
+                    clearTimeout(commandTimeout);
+                    port.removeListener('data', listener);
+                    reject(new Error('Fatal error'));
+                    return;
                 }
 
                 if (lastLine === 'OK') {

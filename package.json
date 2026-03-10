@@ -1,6 +1,6 @@
 {
     "name": "@starak/sim800c",
-    "version": "2.2.0",
+    "version": "2.2.2",
     "description": "Simple library for sending and receiving messages with sim800c",
     "main": "dist/index.js",
     "files": [
@@ -18,7 +18,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/starak/sim800c.git"
+        "url": "git+https://github.com/starak/sim800c.git"
     },
     "license": "MIT",
     "dependencies": {
